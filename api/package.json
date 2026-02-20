@@ -1,7 +1,7 @@
 {
   "name": "peninsula-api",
-  "version": "0.1.0",
-  "description": "Peninsula API (V0)",
+  "version": "1.0.0",
+  "description": "Peninsula API",
   "main": "src/index.js",
   "type": "module",
   "scripts": {

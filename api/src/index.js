@@ -49,6 +49,11 @@ app.get("/health", async (_req, res) => {
   return res.json({ status: "ok" });
 });
 
+app.get("/version", async (_req, res) => {
+  const { default: pkg } = await import("../../package.json", { with: { type: "json" } });
+  return res.json({ version: pkg.version });
+});
+
 api.post("/auth/login", async (req, res) => {
   const parsed = loginSchema.safeParse(req.body);
   if (!parsed.success) {

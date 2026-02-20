@@ -116,3 +116,10 @@ table th, table td {
   color: #800000;
   font-size: 12px;
 }
+
+.version-footer {
+  text-align: center;
+  padding: 12px 0;
+  font-size: 11px;
+  color: #808080;
+}

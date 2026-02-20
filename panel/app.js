@@ -93,11 +93,6 @@ loginForm.addEventListener("submit", async (event) => {
     loginInfo.textContent = `Connecté en tant que ${username}`;
     showUsers();
     await loadUsers();
-    // Fetch version
-    try {
-      const versionData = await apiRequest("/version");
-      document.getElementById("version-label").textContent = `Peninsula v${versionData.version}`;
-    } catch {}
   } catch (error) {
     loginError.textContent = error.message;
   }

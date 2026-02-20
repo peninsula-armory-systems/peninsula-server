@@ -14,7 +14,7 @@ echo "Mise à jour..."
 
 git -C "$REPO_DIR" pull
 
-rsync -a --delete "$REPO_DIR/api/" "$APP_DIR/"
+rsync -a --delete --exclude='.env' --exclude='node_modules' "$REPO_DIR/api/" "$APP_DIR/"
 rsync -a --delete "$REPO_DIR/panel/" "$PANEL_DIR/"
 
 cd "$APP_DIR"

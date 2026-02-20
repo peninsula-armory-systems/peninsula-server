@@ -4,9 +4,18 @@ import cors from "cors";
 import helmet from "helmet";
 import bcrypt from "bcrypt";
 import { z } from "zod";
+import { execFile, spawn } from "child_process";
+import { promisify } from "util";
+import path from "path";
+import { fileURLToPath } from "url";
 import { initDb, query } from "./db.js";
 import { signAccessToken, signRefreshToken, verifyRefreshToken } from "./auth.js";
 import { requireAdmin, requireAuth } from "./middleware.js";
+
+const execFileAsync = promisify(execFile);
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const REPO_DIR = process.env.REPO_DIR || path.resolve(__dirname, "../../..");
 
 const app = express();
 
@@ -194,6 +203,108 @@ api.post("/admin/users/delete", requireAuth, requireAdmin, async (req, res) => {
 
   await audit(req.user.sub, "user_deleted", { id });
   return res.json({ success: true });
+});
+
+// ── Update module ──────────────────────────────────────────────────────────
+
+api.get("/admin/update/check", requireAuth, requireAdmin, async (req, res) => {
+  try {
+    // Get local HEAD
+    const { stdout: localHash } = await execFileAsync("git", ["-C", REPO_DIR, "rev-parse", "HEAD"]);
+    const { stdout: localMsg } = await execFileAsync("git", ["-C", REPO_DIR, "log", "-1", "--format=%s"]);
+    const { stdout: localDate } = await execFileAsync("git", ["-C", REPO_DIR, "log", "-1", "--format=%ci"]);
+    const { stdout: branch } = await execFileAsync("git", ["-C", REPO_DIR, "rev-parse", "--abbrev-ref", "HEAD"]);
+
+    // Fetch remote
+    await execFileAsync("git", ["-C", REPO_DIR, "fetch", "origin"]);
+
+    // Get remote HEAD
+    const remoteBranch = `origin/${branch.trim()}`;
+    const { stdout: remoteHash } = await execFileAsync("git", ["-C", REPO_DIR, "rev-parse", remoteBranch]);
+    const { stdout: remoteMsg } = await execFileAsync("git", ["-C", REPO_DIR, "log", "-1", "--format=%s", remoteBranch]);
+    const { stdout: remoteDate } = await execFileAsync("git", ["-C", REPO_DIR, "log", "-1", "--format=%ci", remoteBranch]);
+
+    // Count commits behind
+    const { stdout: behindCount } = await execFileAsync("git", ["-C", REPO_DIR, "rev-list", "--count", `HEAD..${remoteBranch}`]);
+
+    await audit(req.user.sub, "update_check", {});
+
+    return res.json({
+      updateAvailable: localHash.trim() !== remoteHash.trim(),
+      commitsBehind: Number(behindCount.trim()),
+      branch: branch.trim(),
+      local: {
+        hash: localHash.trim().substring(0, 8),
+        message: localMsg.trim(),
+        date: localDate.trim()
+      },
+      remote: {
+        hash: remoteHash.trim().substring(0, 8),
+        message: remoteMsg.trim(),
+        date: remoteDate.trim()
+      }
+    });
+  } catch (error) {
+    console.error("Update check failed:", error);
+    return res.status(500).json({ error: "update_check_failed", details: error.message });
+  }
+});
+
+let updateInProgress = false;
+
+api.post("/admin/update/apply", requireAuth, requireAdmin, async (req, res) => {
+  if (updateInProgress) {
+    return res.status(409).json({ error: "update_already_in_progress" });
+  }
+
+  updateInProgress = true;
+
+  try {
+    const scriptPath = path.resolve(REPO_DIR, "scripts/update.sh");
+
+    await audit(req.user.sub, "update_apply", {});
+
+    const result = await new Promise((resolve, reject) => {
+      const child = spawn("sudo", ["bash", scriptPath], {
+        cwd: REPO_DIR,
+        timeout: 120_000
+      });
+
+      let stdout = "";
+      let stderr = "";
+
+      child.stdout.on("data", (data) => { stdout += data.toString(); });
+      child.stderr.on("data", (data) => { stderr += data.toString(); });
+
+      child.on("close", (code) => {
+        resolve({ code, stdout, stderr });
+      });
+
+      child.on("error", (err) => {
+        reject(err);
+      });
+    });
+
+    updateInProgress = false;
+
+    if (result.code !== 0) {
+      return res.status(500).json({
+        error: "update_script_failed",
+        exitCode: result.code,
+        stdout: result.stdout,
+        stderr: result.stderr
+      });
+    }
+
+    return res.json({
+      success: true,
+      output: result.stdout
+    });
+  } catch (error) {
+    updateInProgress = false;
+    console.error("Update apply failed:", error);
+    return res.status(500).json({ error: "update_apply_failed", details: error.message });
+  }
 });
 
 const port = Number(process.env.PORT || 4875);

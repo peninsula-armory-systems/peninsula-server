@@ -39,38 +39,106 @@
             <h2>Utilisateurs</h2>
             <p id="login-info"></p>
           </div>
-          <button id="logout-btn" class="secondary">Déconnexion</button>
+          <nav class="header-nav">
+            <button id="tab-users-btn" class="tab-btn active">Utilisateurs</button>
+            <button id="tab-update-btn" class="tab-btn">Mise à jour</button>
+            <button id="logout-btn" class="secondary">Déconnexion</button>
+          </nav>
         </header>
 
-        <div class="grid">
-          <form id="create-form" class="panel">
-            <h3>Créer un utilisateur</h3>
-            <label>Nom d'utilisateur <input type="text" id="create-username" required /></label>
-            <label>Mot de passe <input type="password" id="create-password" required /></label>
-            <label>Rôle
-              <select id="create-role">
-                <option value="user">user</option>
-                <option value="admin">admin</option>
-              </select>
-            </label>
-            <button type="submit">Créer</button>
-            <p id="create-error" class="error"></p>
-          </form>
+        <!-- Tab: Utilisateurs -->
+        <div id="tab-users" class="tab-content">
+          <div class="grid">
+            <form id="create-form" class="panel">
+              <h3>Créer un utilisateur</h3>
+              <label>Nom d'utilisateur <input type="text" id="create-username" required /></label>
+              <label>Mot de passe <input type="password" id="create-password" required /></label>
+              <label>Rôle
+                <select id="create-role">
+                  <option value="user">user</option>
+                  <option value="admin">admin</option>
+                </select>
+              </label>
+              <button type="submit">Créer</button>
+              <p id="create-error" class="error"></p>
+            </form>
 
-          <div class="panel">
-            <h3>Liste</h3>
-            <table>
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Utilisateur</th>
-                  <th>Rôle</th>
-                  <th>Créé</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody id="users-table"></tbody>
-            </table>
+            <div class="panel">
+              <h3>Liste</h3>
+              <table>
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Utilisateur</th>
+                    <th>Rôle</th>
+                    <th>Créé</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="users-table"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab: Mise à jour -->
+        <div id="tab-update" class="tab-content hidden">
+          <div class="update-container">
+            <div class="panel update-panel">
+              <h3>🔄 Mise à jour du serveur</h3>
+              <p class="update-desc">Vérifiez et appliquez les mises à jour depuis le dépôt GitHub.</p>
+
+              <div class="update-info" id="update-info">
+                <div class="update-row">
+                  <span class="update-label">Branche :</span>
+                  <span id="update-branch">—</span>
+                </div>
+                <div class="update-row">
+                  <span class="update-label">Commit local :</span>
+                  <span id="update-local-hash">—</span>
+                </div>
+                <div class="update-row">
+                  <span class="update-label">Message :</span>
+                  <span id="update-local-msg">—</span>
+                </div>
+                <div class="update-row">
+                  <span class="update-label">Date :</span>
+                  <span id="update-local-date">—</span>
+                </div>
+              </div>
+
+              <div class="update-info" id="update-remote-info" style="display:none;">
+                <h4>Dernière version distante</h4>
+                <div class="update-row">
+                  <span class="update-label">Commit :</span>
+                  <span id="update-remote-hash">—</span>
+                </div>
+                <div class="update-row">
+                  <span class="update-label">Message :</span>
+                  <span id="update-remote-msg">—</span>
+                </div>
+                <div class="update-row">
+                  <span class="update-label">Date :</span>
+                  <span id="update-remote-date">—</span>
+                </div>
+                <div class="update-row">
+                  <span class="update-label">Retard :</span>
+                  <span id="update-behind">—</span>
+                </div>
+              </div>
+
+              <div id="update-status" class="update-status"></div>
+
+              <div class="update-actions">
+                <button id="update-check-btn" type="button">Vérifier les mises à jour</button>
+                <button id="update-apply-btn" type="button" class="success" disabled>Appliquer la mise à jour</button>
+              </div>
+
+              <div id="update-log" class="update-log hidden">
+                <h4>Log de mise à jour</h4>
+                <pre id="update-log-content"></pre>
+              </div>
+            </div>
           </div>
         </div>
       </section>

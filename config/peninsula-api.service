@@ -1,0 +1,14 @@
+[Unit]
+Description=Peninsula Server API
+After=network.target postgresql.service
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/peninsula-api
+ExecStart=/usr/bin/node /opt/peninsula-api/src/index.js
+Restart=always
+Environment=NODE_ENV=production
+EnvironmentFile=/opt/peninsula-api/.env
+
+[Install]
+WantedBy=multi-user.target

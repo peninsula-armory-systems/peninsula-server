@@ -117,10 +117,9 @@ table th, table td {
   font-size: 12px;
 }
 
-.version-footer {
-  text-align: center;
-  padding: 16px 0;
-  font-size: 12px;
-  color: #404040;
+.version-tag {
+  font-size: 11px;
+  color: #808080;
+  margin: -8px 0 8px;
   font-weight: 700;
 }

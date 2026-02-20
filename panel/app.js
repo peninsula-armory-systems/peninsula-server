@@ -155,3 +155,15 @@ usersTable.addEventListener("click", async (event) => {
 // Charger l'URL sauvegardée au démarrage
 loadSavedApiUrl();
 showLogin();
+
+// Afficher la version depuis l'API
+apiUrlInput.addEventListener("change", fetchVersion);
+function fetchVersion() {
+  const url = apiUrlInput.value.trim();
+  if (!url) return;
+  fetch(`${url}/version`)
+    .then(r => r.json())
+    .then(d => { document.getElementById("version-tag").textContent = `v${d.version}`; })
+    .catch(() => {});
+}
+if (apiUrlInput.value.trim()) fetchVersion();

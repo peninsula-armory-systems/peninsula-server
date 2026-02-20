@@ -2,18 +2,18 @@
 set -euo pipefail
 
 if [[ $EUID -ne 0 ]]; then
-  echo "Veuillez exécuter en root (sudo)."
+  echo "Please run as root (sudo)."
   exit 1
 fi
 
 if ! grep -qi "ubuntu" /etc/os-release; then
-  echo "Ubuntu requis."
+  echo "Ubuntu required."
   exit 1
 fi
 
 UBUNTU_VERSION=$(lsb_release -rs | cut -d. -f1)
 if [[ "$UBUNTU_VERSION" -lt 20 ]]; then
-  echo "Ubuntu 20.04+ requis."
+  echo "Ubuntu 20.04+ required."
   exit 1
 fi
 
@@ -25,31 +25,31 @@ DB_NAME="peninsula"
 DB_USER="peninsula"
 
 echo "=========================================="
-echo "INSTALLATION DE PENINSULA"
+echo "PENINSULA INSTALLATION"
 echo "=========================================="
 echo ""
 
-# Demander le mot de passe PostgreSQL
-echo "Sécurité :"
-read -sp "Mot de passe pour l'utilisateur PostgreSQL '$DB_USER' : " DB_PASSWORD
+# Ask for PostgreSQL password
+echo "Security:"
+read -sp "Password for PostgreSQL user '$DB_USER': " DB_PASSWORD
 echo ""
-read -sp "Confirmez le mot de passe : " DB_PASSWORD_CONFIRM
+read -sp "Confirm password: " DB_PASSWORD_CONFIRM
 echo ""
 
 if [[ "$DB_PASSWORD" != "$DB_PASSWORD_CONFIRM" ]]; then
-  echo "Erreur : les mots de passe ne correspondent pas."
+  echo "Error: passwords do not match."
   exit 1
 fi
 
 if [[ ${#DB_PASSWORD} -lt 8 ]]; then
-  echo "Erreur : le mot de passe doit faire au moins 8 caractères."
+  echo "Error: password must be at least 8 characters."
   exit 1
 fi
 
-echo "✓ Mot de passe défini"
+echo "✓ Password set"
 echo ""
 
-echo "Installation des dépendances..."
+echo "Installing dependencies..."
 apt-get update
 apt-get install -y curl git nginx postgresql postgresql-contrib
 
@@ -61,18 +61,18 @@ fi
 systemctl enable postgresql
 systemctl restart postgresql
 
-echo "Attente du démarrage de PostgreSQL..."
+echo "Waiting for PostgreSQL to start..."
 sleep 2
 
-# Redémarrer l'instance PostgreSQL spécifique
+# Restart the specific PostgreSQL instance
 systemctl restart postgresql@16-main 2>/dev/null || true
 
 for i in {1..60}; do
   if sudo -u postgres pg_isready -q 2>/dev/null; then
-    echo "PostgreSQL est prêt."
+    echo "PostgreSQL is ready."
     break
   fi
-  echo "Tentative $i/60..."
+  echo "Attempt $i/60..."
   sleep 1
 done
 
@@ -122,5 +122,5 @@ nginx -t
 systemctl start nginx
 systemctl reload nginx
 
-echo "Installation terminée."
-echo "Panel web : http://$(hostname -I | awk '{print $1}')/"
+echo "Installation complete."
+echo "Web panel: http://$(hostname -I | awk '{print $1}')/"

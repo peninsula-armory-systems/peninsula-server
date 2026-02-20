@@ -13,7 +13,7 @@ const createError = document.getElementById("create-error");
 let apiUrl = "";
 let accessToken = "";
 
-// Charger l'URL sauvegardée au démarrage
+// Load saved URL on startup
 function loadSavedApiUrl() {
   const savedUrl = localStorage.getItem("peninsula_api_url");
   if (savedUrl) {
@@ -45,7 +45,7 @@ async function apiRequest(path, options = {}) {
 
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
-    const error = data?.error || "Erreur API";
+    const error = data?.error || "API error";
     throw new Error(error);
   }
   return data;
@@ -62,8 +62,8 @@ async function loadUsers() {
       <td>${user.role}</td>
       <td>${new Date(user.created_at).toLocaleString()}</td>
       <td>
-        <button class="secondary" data-action="reset" data-id="${user.id}">Reset MDP</button>
-        <button class="danger" data-action="delete" data-id="${user.id}">Supprimer</button>
+        <button class="secondary" data-action="reset" data-id="${user.id}">Reset password</button>
+        <button class="danger" data-action="delete" data-id="${user.id}">Delete</button>
       </td>
     `;
     usersTable.appendChild(row);
@@ -77,7 +77,7 @@ loginForm.addEventListener("submit", async (event) => {
   const username = document.getElementById("login-username").value.trim();
   const password = document.getElementById("login-password").value;
 
-  // Sauvegarder l'URL si la checkbox est cochée
+  // Save URL if checkbox is checked
   if (rememberUrlCheckbox.checked) {
     localStorage.setItem("peninsula_api_url", apiUrl);
   } else {
@@ -90,7 +90,7 @@ loginForm.addEventListener("submit", async (event) => {
       body: JSON.stringify({ username, password })
     });
     accessToken = data.accessToken;
-    loginInfo.textContent = `Connecté en tant que ${username}`;
+    loginInfo.textContent = `Logged in as ${username}`;
     showUsers();
     await loadUsers();
   } catch (error) {
@@ -139,7 +139,7 @@ usersTable.addEventListener("click", async (event) => {
       });
     }
     if (action === "reset") {
-      const newPassword = prompt("Nouveau mot de passe ?");
+      const newPassword = prompt("New password?");
       if (!newPassword) return;
       await apiRequest("/v1/admin/users/update", {
         method: "POST",
@@ -152,11 +152,11 @@ usersTable.addEventListener("click", async (event) => {
   }
 });
 
-// Charger l'URL sauvegardée au démarrage
+// Load saved URL on startup
 loadSavedApiUrl();
 showLogin();
 
-// Afficher la version depuis l'API
+// Display version from API
 apiUrlInput.addEventListener("change", fetchVersion);
 function fetchVersion() {
   const url = apiUrlInput.value.trim();

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -11,25 +11,25 @@
       <section id="login-section" class="card">
         <h1>Peninsula Panel</h1>
         <p class="version-tag" id="version-tag"></p>
-        <p>Connexion administrateur</p>
+        <p>Administrator login</p>
         <form id="login-form">
           <label>
-            Utilisateur
+            Username
             <input type="text" id="login-username" required />
           </label>
           <label>
-            Mot de passe
+            Password
             <input type="password" id="login-password" required />
           </label>
           <label>
-            URL API
-            <input type="text" id="api-url" placeholder="https://serveur/api" required />
+            API URL
+            <input type="text" id="api-url" placeholder="https://server/api" required />
           </label>
           <label>
             <input type="checkbox" id="remember-url" />
-            Se souvenir de l'URL
+            Remember URL
           </label>
-          <button type="submit">Se connecter</button>
+          <button type="submit">Log in</button>
           <p id="login-error" class="error"></p>
         </form>
       </section>
@@ -37,36 +37,36 @@
       <section id="users-section" class="card hidden">
         <header class="header">
           <div>
-            <h2>Utilisateurs</h2>
+            <h2>Users</h2>
             <p id="login-info"></p>
           </div>
-          <button id="logout-btn" class="secondary">Déconnexion</button>
+          <button id="logout-btn" class="secondary">Log out</button>
         </header>
 
         <div class="grid">
           <form id="create-form" class="panel">
-            <h3>Créer un utilisateur</h3>
-            <label>Nom d'utilisateur <input type="text" id="create-username" required /></label>
-            <label>Mot de passe <input type="password" id="create-password" required /></label>
-            <label>Rôle
+            <h3>Create user</h3>
+            <label>Username <input type="text" id="create-username" required /></label>
+            <label>Password <input type="password" id="create-password" required /></label>
+            <label>Role
               <select id="create-role">
                 <option value="user">user</option>
                 <option value="admin">admin</option>
               </select>
             </label>
-            <button type="submit">Créer</button>
+            <button type="submit">Create</button>
             <p id="create-error" class="error"></p>
           </form>
 
           <div class="panel">
-            <h3>Liste</h3>
+            <h3>List</h3>
             <table>
               <thead>
                 <tr>
                   <th>ID</th>
-                  <th>Utilisateur</th>
-                  <th>Rôle</th>
-                  <th>Créé</th>
+                  <th>Username</th>
+                  <th>Role</th>
+                  <th>Created</th>
                   <th>Actions</th>
                 </tr>
               </thead>

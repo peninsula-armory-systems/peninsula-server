@@ -1,6 +1,6 @@
 `main`  = production branch (stable)
 
-`dev`   = developement branch
+`dev`   = development branch
 
 ## License
 

@@ -2,7 +2,7 @@
 set -euo pipefail
 
 if [[ $EUID -ne 0 ]]; then
-  echo "Veuillez exécuter en root (sudo)."
+  echo "Please run as root (sudo)."
   exit 1
 fi
 
@@ -10,7 +10,7 @@ APP_DIR="/opt/peninsula-api"
 PANEL_DIR="/var/www/peninsula-panel"
 REPO_DIR="$(pwd)"
 
-echo "Mise à jour..."
+echo "Updating..."
 
 git -C "$REPO_DIR" pull
 
@@ -23,4 +23,4 @@ systemctl restart peninsula-api
 
 systemctl reload nginx
 
-echo "Mise à jour terminée."
+echo "Update complete."

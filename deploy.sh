@@ -176,6 +176,9 @@ fi
 log "Fichier .env trouvé ✓"
 
 # ── Build + Up ──────────────────────────────────────────
+log "Arrêt des anciens conteneurs..."
+$COMPOSE $PROFILE down --remove-orphans 2>/dev/null || true
+
 log "Construction et lancement de la stack..."
 $COMPOSE $PROFILE build
 $COMPOSE $PROFILE up -d

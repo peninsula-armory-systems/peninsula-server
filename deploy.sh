@@ -186,14 +186,14 @@ $COMPOSE $PROFILE up -d
 # ── Wait for health ─────────────────────────────────────
 log "Attente du health check API..."
 source .env 2>/dev/null || true
-for i in $(seq 1 60); do
-  if curl -sf http://localhost:$\{API_PORT:-4875\}/health > /dev/null 2>&1; then
+for i in $(seq 1 90); do
+  if curl -sf http://localhost:${API_PORT:-4875}/health > /dev/null 2>&1; then
     ok "API Peninsula opérationnelle"
     break
   fi
-  if [ "$i" -eq 60 ]; then
-    err "API n'a pas démarré après 60s"
-    $COMPOSE logs api --tail 30
+  if [ "$i" -eq 90 ]; then
+    err "API n'a pas démarré après 90s"
+    $COMPOSE logs --tail 30 api
     exit 1
   fi
   sleep 1

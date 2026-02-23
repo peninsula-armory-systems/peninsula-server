@@ -50,10 +50,11 @@ services:
     networks:
       - peninsula-net
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:4875/health"]
+      test: ["CMD", "node", "-e", "fetch('http://localhost:4875/health').then(r=>{if(!r.ok)throw r;process.exit(0)}).catch(()=>process.exit(1))"]
       interval: 10s
-      timeout: 3s
-      retries: 5
+      timeout: 5s
+      retries: 10
+      start_period: 15s
 
   # ── MySQL (pour PrestaShop) ──────────────────────────────
   ps-mysql:

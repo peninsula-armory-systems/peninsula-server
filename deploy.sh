@@ -2,10 +2,11 @@
 # ─────────────────────────────────────────────────────────
 # Peninsula — deploy.sh
 # Script de déploiement one-shot.
-# Usage : ./deploy.sh          (première install ou update)
-#         ./deploy.sh --dev    (avec phpMyAdmin)
-#         ./deploy.sh --down   (tout arrêter)
-#         ./deploy.sh --reset  (tout supprimer et relancer)
+# Usage : ./deploy.sh --start       (première install ou update)
+#         ./deploy.sh --stop        (tout arrêter)
+#         ./deploy.sh --restart|-r  (relance la stack)
+#         ./deploy.sh --dev         (avec phpMyAdmin)
+#         ./deploy.sh --reset       (tout supprimer et relancer)
 # ─────────────────────────────────────────────────────────
 set -euo pipefail
 
@@ -24,23 +25,38 @@ warn() { echo -e "${YELLOW}[!]${NC} $1"; }
 err()  { echo -e "${RED}[✗]${NC} $1" >&2; }
 
 # ── Parse args ──────────────────────────────────────────
-ACTION="up"
+ACTION=""
 PROFILE=""
 for arg in "$@"; do
   case "$arg" in
-    --dev)   PROFILE="--profile dev" ;;
-    --down)  ACTION="down" ;;
-    --reset) ACTION="reset" ;;
+    --start)          ACTION="start" ;;
+    --stop)           ACTION="stop" ;;
+    --restart|-r)     ACTION="restart" ;;
+    --dev)            PROFILE="--profile dev" ;;
+    --reset)          ACTION="reset" ;;
     --help|-h)
-      echo "Usage: $0 [--dev] [--down] [--reset]"
-      echo "  --dev    Inclut phpMyAdmin"
-      echo "  --down   Arrête la stack"
-      echo "  --reset  Supprime volumes + relance (PERTE DE DONNÉES)"
+      echo "Usage: $0 <command> [options]"
+      echo ""
+      echo "Commands:"
+      echo "  --start          Construire et lancer la stack"
+      echo "  --stop           Arrêter la stack"
+      echo "  --restart, -r    Redémarrer la stack"
+      echo "  --reset          Supprimer volumes + relancer (PERTE DE DONNÉES)"
+      echo ""
+      echo "Options:"
+      echo "  --dev            Inclut phpMyAdmin"
+      echo "  --help, -h       Afficher cette aide"
       exit 0
       ;;
     *) err "Option inconnue: $arg"; exit 1 ;;
   esac
 done
+
+if [ -z "$ACTION" ]; then
+  err "Aucune commande spécifiée"
+  echo "Usage: $0 --start | --stop | --restart | --reset [--dev]"
+  exit 1
+fi
 
 # ── Install dépendances manquantes ──────────────────────
 install_pkg() {
@@ -125,11 +141,20 @@ else
 fi
 ok "Docker accessible ($COMPOSE)"
 
-# ── Down ────────────────────────────────────────────────
-if [ "$ACTION" = "down" ]; then
+# ── Stop ────────────────────────────────────────────────
+if [ "$ACTION" = "stop" ]; then
   log "Arrêt de la stack..."
   $COMPOSE --profile dev down
   ok "Stack arrêtée"
+  exit 0
+fi
+
+# ── Restart ─────────────────────────────────────────────
+if [ "$ACTION" = "restart" ]; then
+  log "Redémarrage de la stack..."
+  $COMPOSE $PROFILE down --remove-orphans 2>/dev/null || true
+  $COMPOSE $PROFILE up -d
+  ok "Stack redémarrée"
   exit 0
 fi
 
@@ -144,6 +169,7 @@ if [ "$ACTION" = "reset" ]; then
   log "Suppression des volumes..."
   $COMPOSE --profile dev down -v
   ok "Volumes supprimés"
+  ACTION="start"
 fi
 
 # ── Check .env ──────────────────────────────────────────
@@ -219,5 +245,6 @@ echo -e "  Admin API      : ${YELLOW}${ADMIN_USER:-admin}${NC} / (voir .env ADMI
 echo -e "  Admin PS       : ${YELLOW}${PS_ADMIN_MAIL:-admin@peninsula.local}${NC} / (voir .env PS_ADMIN_PASSWD)"
 echo ""
 echo -e "  Logs           : $COMPOSE logs -f"
-echo -e "  Arrêter        : ./deploy.sh --down"
+echo -e "  Arrêter        : ./deploy.sh --stop"
+echo -e "  Redémarrer     : ./deploy.sh -r"
 echo ""

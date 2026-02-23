@@ -85,14 +85,15 @@ export async function initDb() {
     );
   `);
 
-  // ── Publication vers les canaux de vente ──────────────
-  // Un produit dans "products" = inventaire Peninsula
-  // Un row ici avec published=true = en vente sur le canal
+  // ── Publication vers PrestaShop ───────────────────────
+  // Un produit dans "products" = inventaire Peninsula (complet)
+  // Un row ici avec published=true = en vente sur PrestaShop
+  // (Naturabuy est géré par un module PS séparé, pas par Peninsula)
   await query(`
     CREATE TABLE IF NOT EXISTS product_channels (
       id SERIAL PRIMARY KEY,
       product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
-      channel TEXT NOT NULL CHECK (channel IN ('prestashop', 'naturabuy')),
+      channel TEXT NOT NULL CHECK (channel IN ('prestashop')),
       published BOOLEAN NOT NULL DEFAULT false,
       external_id TEXT,
       sale_price NUMERIC(10,2),
@@ -108,7 +109,7 @@ export async function initDb() {
   await query(`
     CREATE TABLE IF NOT EXISTS orders (
       id SERIAL PRIMARY KEY,
-      source TEXT NOT NULL CHECK (source IN ('prestashop', 'naturabuy', 'direct')),
+      source TEXT NOT NULL CHECK (source IN ('prestashop', 'direct')),
       external_order_id TEXT,
       reference TEXT,
       status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'confirmed', 'shipped', 'delivered', 'cancelled')),

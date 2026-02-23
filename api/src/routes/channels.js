@@ -7,8 +7,10 @@ const router = Router();
 
 // ── Schemas ─────────────────────────────────────────────
 
+const VALID_CHANNELS = ["prestashop"];
+
 const publishSchema = z.object({
-  channel: z.enum(["prestashop", "naturabuy"]),
+  channel: z.enum(VALID_CHANNELS),
   published: z.boolean(),
   sale_price: z.number().min(0).nullable().optional(),
 });
@@ -64,7 +66,7 @@ router.put("/:productId", requireAuth, async (req, res) => {
 
 router.get("/channel/:channel", requireAuth, async (req, res) => {
   const channel = req.params.channel;
-  if (!["prestashop", "naturabuy"].includes(channel)) {
+  if (!VALID_CHANNELS.includes(channel)) {
     return res.status(400).json({ error: "invalid_channel" });
   }
 
@@ -105,7 +107,7 @@ router.post("/:productId/synced", requireAuth, async (req, res) => {
   const channel = req.body.channel;
   const externalId = req.body.external_id;
 
-  if (!channel || !["prestashop", "naturabuy"].includes(channel)) {
+  if (!channel || !VALID_CHANNELS.includes(channel)) {
     return res.status(400).json({ error: "invalid_channel" });
   }
 
@@ -136,7 +138,7 @@ router.post("/:productId/sync-error", requireAuth, async (req, res) => {
 
   const { channel, error: syncError } = req.body;
 
-  if (!channel || !["prestashop", "naturabuy"].includes(channel)) {
+  if (!channel || !VALID_CHANNELS.includes(channel)) {
     return res.status(400).json({ error: "invalid_channel" });
   }
 

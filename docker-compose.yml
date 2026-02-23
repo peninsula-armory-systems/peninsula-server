@@ -100,7 +100,6 @@ services:
       ADMIN_PASSWD: ${PS_ADMIN_PASSWD:-Peninsula2026}
     volumes:
       - ps_data:/var/www/html
-      - ./prestashop/peninsulaconnector:/var/www/html/modules/peninsulaconnector
     ports:
       - "${PS_PORT:-8080}:80"
     networks:

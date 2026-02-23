@@ -42,28 +42,93 @@ for arg in "$@"; do
   esac
 done
 
-# ── Check Docker (toujours en premier) ──────────────────
+# ── Install dépendances manquantes ──────────────────────
+install_pkg() {
+  if command -v apt-get &>/dev/null; then
+    sudo apt-get update -qq && sudo apt-get install -y -qq "$@"
+  elif command -v pacman &>/dev/null; then
+    sudo pacman -S --noconfirm "$@"
+  elif command -v dnf &>/dev/null; then
+    sudo dnf install -y "$@"
+  else
+    err "Impossible d'installer $* — gestionnaire de paquets inconnu"
+    exit 1
+  fi
+}
+
+# Docker
 if ! command -v docker &>/dev/null; then
-  err "Docker n'est pas installé"
+  log "Installation de Docker..."
+  if command -v apt-get &>/dev/null; then
+    sudo apt-get update -qq
+    sudo apt-get install -y -qq docker.io docker-compose
+  elif command -v pacman &>/dev/null; then
+    sudo pacman -S --noconfirm docker docker-compose
+  elif command -v dnf &>/dev/null; then
+    sudo dnf install -y docker docker-compose
+  else
+    err "Impossible d'installer Docker automatiquement"
+    err "Installez Docker manuellement : https://docs.docker.com/engine/install/"
+    exit 1
+  fi
+  sudo systemctl enable --now docker
+  ok "Docker installé"
+fi
+
+# curl
+if ! command -v curl &>/dev/null; then
+  log "Installation de curl..."
+  install_pkg curl
+fi
+
+# openssl (pour la génération de mots de passe)
+if ! command -v openssl &>/dev/null; then
+  log "Installation de openssl..."
+  install_pkg openssl
+fi
+
+# docker-compose (si docker compose v2 absent)
+if ! docker compose version &>/dev/null 2>&1; then
+  if ! command -v docker-compose &>/dev/null; then
+    log "Installation de docker-compose..."
+    install_pkg docker-compose
+  fi
+fi
+
+ok "Dépendances OK"
+
+# ── Check Docker ────────────────────────────────────────
+DOCKER=""
+COMPOSE=""
+
+if docker info &>/dev/null 2>&1; then
+  DOCKER="docker"
+elif sudo docker info &>/dev/null 2>&1; then
+  DOCKER="sudo docker"
+  warn "Docker nécessite sudo"
+else
+  err "Docker daemon non accessible (sudo ? groupe docker ?)"
   exit 1
 fi
 
-DOCKER="docker"
-if ! docker info &>/dev/null 2>&1; then
-  if sudo docker info &>/dev/null 2>&1; then
-    DOCKER="sudo docker"
-    warn "Docker nécessite sudo — utilisation de 'sudo docker'"
+if $DOCKER compose version &>/dev/null 2>&1; then
+  COMPOSE="$DOCKER compose"
+elif command -v docker-compose &>/dev/null 2>&1; then
+  if [ "$DOCKER" = "sudo docker" ]; then
+    COMPOSE="sudo docker-compose"
   else
-    err "Docker daemon non accessible (sudo ? groupe docker ?)"
-    exit 1
+    COMPOSE="docker-compose"
   fi
+else
+  err "Ni 'docker compose' ni 'docker-compose' n'est disponible"
+  exit 1
 fi
-ok "Docker accessible"
+ok "Docker accessible ($COMPOSE)"
 
 # ── Down ────────────────────────────────────────────────
 if [ "$ACTION" = "down" ]; then
   log "Arrêt de la stack..."
-  $DOCKER compose --profile dev down
+  $COMPOSE --profile dev down
   ok "Stack arrêtée"
   exit 0
 fi
@@ -77,7 +142,7 @@ if [ "$ACTION" = "reset" ]; then
     exit 0
   fi
   log "Suppression des volumes..."
-  $DOCKER compose --profile dev down -v
+  $COMPOSE --profile dev down -v
   ok "Volumes supprimés"
 fi
 
@@ -112,8 +177,8 @@ log "Fichier .env trouvé ✓"
 
 # ── Build + Up ──────────────────────────────────────────
 log "Construction et lancement de la stack..."
-$DOCKER compose $PROFILE build
-$DOCKER compose $PROFILE up -d
+$COMPOSE $PROFILE build
+$COMPOSE $PROFILE up -d
 
 # ── Wait for health ─────────────────────────────────────
 log "Attente du health check API..."
@@ -125,7 +190,7 @@ for i in $(seq 1 60); do
   fi
   if [ "$i" -eq 60 ]; then
     err "API n'a pas démarré après 60s"
-    $DOCKER compose logs api --tail 30
+    $COMPOSE logs api --tail 30
     exit 1
   fi
   sleep 1
@@ -150,6 +215,6 @@ echo ""
 echo -e "  Admin API      : ${YELLOW}${ADMIN_USER:-admin}${NC} / (voir .env ADMIN_PASS)"
 echo -e "  Admin PS       : ${YELLOW}${PS_ADMIN_MAIL:-admin@peninsula.local}${NC} / (voir .env PS_ADMIN_PASSWD)"
 echo ""
-echo -e "  Logs           : $DOCKER compose logs -f"
+echo -e "  Logs           : $COMPOSE logs -f"
 echo -e "  Arrêter        : ./deploy.sh --down"
 echo ""

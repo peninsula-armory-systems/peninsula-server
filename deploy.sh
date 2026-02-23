@@ -42,10 +42,28 @@ for arg in "$@"; do
   esac
 done
 
+# ── Check Docker (toujours en premier) ──────────────────
+if ! command -v docker &>/dev/null; then
+  err "Docker n'est pas installé"
+  exit 1
+fi
+
+DOCKER="docker"
+if ! docker info &>/dev/null 2>&1; then
+  if sudo docker info &>/dev/null 2>&1; then
+    DOCKER="sudo docker"
+    warn "Docker nécessite sudo — utilisation de 'sudo docker'"
+  else
+    err "Docker daemon non accessible (sudo ? groupe docker ?)"
+    exit 1
+  fi
+fi
+ok "Docker accessible"
+
 # ── Down ────────────────────────────────────────────────
 if [ "$ACTION" = "down" ]; then
   log "Arrêt de la stack..."
-  docker compose --profile dev down
+  $DOCKER compose --profile dev down
   ok "Stack arrêtée"
   exit 0
 fi
@@ -59,7 +77,7 @@ if [ "$ACTION" = "reset" ]; then
     exit 0
   fi
   log "Suppression des volumes..."
-  docker compose --profile dev down -v
+  $DOCKER compose --profile dev down -v
   ok "Volumes supprimés"
 fi
 
@@ -74,13 +92,11 @@ if [ ! -f .env ]; then
 
   cp .env.example .env
 
-  # Générer des mots de passe aléatoires
   gen_pass() { openssl rand -base64 32 | tr -dc 'a-zA-Z0-9' | head -c 32; }
 
   sed -i "s|CHANGE_ME_pg_password|$(gen_pass)|"      .env
-  sed -i "s|CHANGE_ME_random_64_chars|$(gen_pass)|"   .env  # access secret
-  # Le second CHANGE_ME_random_64_chars
-  sed -i "s|CHANGE_ME_random_64_chars|$(gen_pass)|"   .env  # refresh secret
+  sed -i "s|CHANGE_ME_random_64_chars|$(gen_pass)|"   .env
+  sed -i "s|CHANGE_ME_random_64_chars|$(gen_pass)|"   .env
   sed -i "s|CHANGE_ME_admin_password|$(gen_pass)|"    .env
   sed -i "s|CHANGE_ME_mysql_root|$(gen_pass)|"        .env
   sed -i "s|CHANGE_ME_mysql_password|$(gen_pass)|"    .env
@@ -94,40 +110,28 @@ fi
 
 log "Fichier .env trouvé ✓"
 
-# ── Check Docker ────────────────────────────────────────
-if ! command -v docker &>/dev/null; then
-  err "Docker n'est pas installé"
-  exit 1
-fi
-
-if ! docker info &>/dev/null; then
-  err "Docker daemon non accessible (sudo ? groupe docker ?)"
-  exit 1
-fi
-
 # ── Build + Up ──────────────────────────────────────────
 log "Construction et lancement de la stack..."
-docker compose $PROFILE build --pull
-docker compose $PROFILE up -d
+$DOCKER compose $PROFILE build
+$DOCKER compose $PROFILE up -d
 
 # ── Wait for health ─────────────────────────────────────
 log "Attente du health check API..."
-for i in $(seq 1 30); do
-  if curl -sf http://localhost:${API_PORT:-4875}/health > /dev/null 2>&1; then
+source .env 2>/dev/null || true
+for i in $(seq 1 60); do
+  if curl -sf http://localhost:$\{API_PORT:-4875\}/health > /dev/null 2>&1; then
     ok "API Peninsula opérationnelle"
     break
   fi
-  if [ "$i" -eq 30 ]; then
-    err "API n'a pas démarré après 30s"
-    docker compose logs api --tail 20
+  if [ "$i" -eq 60 ]; then
+    err "API n'a pas démarré après 60s"
+    $DOCKER compose logs api --tail 30
     exit 1
   fi
   sleep 1
 done
 
 # ── Info ────────────────────────────────────────────────
-source .env 2>/dev/null || true
-
 echo ""
 echo -e "${GREEN}════════════════════════════════════════════════════${NC}"
 echo -e "${GREEN}  Peninsula Stack déployée avec succès !${NC}"
@@ -146,6 +150,6 @@ echo ""
 echo -e "  Admin API      : ${YELLOW}${ADMIN_USER:-admin}${NC} / (voir .env ADMIN_PASS)"
 echo -e "  Admin PS       : ${YELLOW}${PS_ADMIN_MAIL:-admin@peninsula.local}${NC} / (voir .env PS_ADMIN_PASSWD)"
 echo ""
-echo -e "  Logs           : docker compose logs -f"
+echo -e "  Logs           : $DOCKER compose logs -f"
 echo -e "  Arrêter        : ./deploy.sh --down"
 echo ""

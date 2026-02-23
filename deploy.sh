@@ -266,8 +266,8 @@ echo -e "${GREEN}═════════════════════
 echo ""
 echo -e "  API Peninsula  : ${CYAN}http://localhost:${API_PORT:-4875}${NC}"
 echo -e "  Health check   : ${CYAN}http://localhost:${API_PORT:-4875}/health${NC}"
-echo -e "  PrestaShop     : ${CYAN}http://${PS_DOMAIN:-localhost:8080}${NC}"
-echo -e "  PS Admin       : ${CYAN}http://${PS_DOMAIN:-localhost:8080}/${PS_FOLDER_ADMIN:-admin-peninsula}${NC}"
+echo -e "  PrestaShop     : ${CYAN}http://${PS_DOMAIN:-localhost}:${PS_PORT:-8080}${NC}"
+echo -e "  PS Admin       : ${CYAN}http://${PS_DOMAIN:-localhost}:${PS_PORT:-8080}/${PS_FOLDER_ADMIN:-admin-peninsula}${NC}"
 
 if echo "$PROFILE" | grep -q dev; then
   echo -e "  phpMyAdmin     : ${CYAN}http://localhost:${PMA_PORT:-8081}${NC}"

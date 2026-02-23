@@ -82,6 +82,7 @@ services:
     image: prestashop/prestashop:8-apache
     container_name: peninsula-prestashop
     restart: unless-stopped
+    command: ["apache2-foreground"]
     depends_on:
       ps-mysql:
         condition: service_healthy
@@ -90,7 +91,8 @@ services:
       DB_USER: ${MYSQL_USER:-ps_user}
       DB_PASSWD: ${MYSQL_PASSWORD}
       DB_NAME: ${MYSQL_DATABASE:-prestashop}
-      PS_DOMAIN: ${PS_DOMAIN:-localhost:8080}
+      PS_DOMAIN: ${PS_DOMAIN:-localhost}
+      PS_HANDLE_DYNAMIC_DOMAIN: ${PS_HANDLE_DYNAMIC_DOMAIN:-1}
       PS_LANGUAGE: fr
       PS_COUNTRY: FR
       PS_INSTALL_AUTO: "1"

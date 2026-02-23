@@ -1,0 +1,133 @@
+# ─────────────────────────────────────────────────────────────
+# Peninsula — Stack complète
+# docker compose up -d   → lance tout
+# docker compose logs -f → suit les logs
+# ─────────────────────────────────────────────────────────────
+
+services:
+
+  # ── PostgreSQL (source de vérité Peninsula) ──────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: peninsula-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${PG_DB:-peninsula}
+      POSTGRES_USER: ${PG_USER:-peninsula}
+      POSTGRES_PASSWORD: ${PG_PASSWORD:?Set PG_PASSWORD in .env}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    ports:
+      - "${PG_PORT:-5432}:5432"
+    networks:
+      - peninsula-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${PG_USER:-peninsula}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # ── Peninsula API (Node.js) ──────────────────────────────
+  api:
+    build: ./api
+    container_name: peninsula-api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${PG_USER:-peninsula}:${PG_PASSWORD}@postgres:5432/${PG_DB:-peninsula}
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?Set JWT_ACCESS_SECRET in .env}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?Set JWT_REFRESH_SECRET in .env}
+      JWT_ACCESS_TTL: ${JWT_ACCESS_TTL:-15m}
+      JWT_REFRESH_TTL: ${JWT_REFRESH_TTL:-7d}
+      PORT: 4875
+      CORS_ORIGIN: ${CORS_ORIGIN:-*}
+      ADMIN_USER: ${ADMIN_USER:-admin}
+      ADMIN_PASS: ${ADMIN_PASS:-admin123}
+    ports:
+      - "${API_PORT:-4875}:4875"
+    networks:
+      - peninsula-net
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:4875/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # ── MySQL (pour PrestaShop) ──────────────────────────────
+  ps-mysql:
+    image: mysql:5.7
+    container_name: peninsula-ps-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD in .env}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-prestashop}
+      MYSQL_USER: ${MYSQL_USER:-ps_user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?Set MYSQL_PASSWORD in .env}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - peninsula-net
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # ── PrestaShop 8 ─────────────────────────────────────────
+  prestashop:
+    image: prestashop/prestashop:8-apache
+    container_name: peninsula-prestashop
+    restart: unless-stopped
+    depends_on:
+      ps-mysql:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+    environment:
+      DB_SERVER: ps-mysql
+      DB_USER: ${MYSQL_USER:-ps_user}
+      DB_PASSWD: ${MYSQL_PASSWORD}
+      DB_NAME: ${MYSQL_DATABASE:-prestashop}
+      PS_DOMAIN: ${PS_DOMAIN:-localhost:8080}
+      PS_LANGUAGE: fr
+      PS_COUNTRY: FR
+      PS_INSTALL_AUTO: "1"
+      PS_DEV_MODE: ${PS_DEV_MODE:-0}
+      PS_FOLDER_ADMIN: ${PS_FOLDER_ADMIN:-admin-peninsula}
+      ADMIN_MAIL: ${PS_ADMIN_MAIL:-admin@peninsula.local}
+      ADMIN_PASSWD: ${PS_ADMIN_PASSWD:-Peninsula2026}
+    volumes:
+      - ps_data:/var/www/html
+      - ./prestashop/peninsulaconnector:/var/www/html/modules/peninsulaconnector
+    ports:
+      - "${PS_PORT:-8080}:80"
+    networks:
+      - peninsula-net
+
+  # ── phpMyAdmin (optionnel, dev) ──────────────────────────
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: peninsula-phpmyadmin
+    restart: unless-stopped
+    profiles: ["dev"]
+    depends_on:
+      - ps-mysql
+    environment:
+      PMA_HOST: ps-mysql
+      PMA_USER: root
+      PMA_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+    ports:
+      - "${PMA_PORT:-8081}:80"
+    networks:
+      - peninsula-net
+
+volumes:
+  pg_data:
+  mysql_data:
+  ps_data:
+
+networks:
+  peninsula-net:
+    driver: bridge

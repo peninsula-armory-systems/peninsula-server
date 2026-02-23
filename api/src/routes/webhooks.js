@@ -12,6 +12,7 @@ const productWebhookSchema = z.object({
   reference: z.string().min(1),
   name: z.string().min(1),
   description: z.string().default(""),
+  brand: z.string().default(""),
   price: z.number().min(0),
   wholesale_price: z.number().min(0).default(0),
   weight: z.number().min(0).default(0),
@@ -96,13 +97,14 @@ router.post("/product", async (req, res) => {
     const categoryId = await findOrCreateCategory(d.category_name);
 
     const result = await query(
-      `INSERT INTO products(sku, name, description, category_id, condition, price, cost_price, tax_rate, weight, images, updated_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())
+      `INSERT INTO products(sku, name, description, category_id, brand, condition, price, cost_price, tax_rate, weight, images, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW())
        ON CONFLICT(sku)
        DO UPDATE SET
          name = EXCLUDED.name,
          description = EXCLUDED.description,
          category_id = EXCLUDED.category_id,
+         brand = EXCLUDED.brand,
          condition = EXCLUDED.condition,
          price = EXCLUDED.price,
          cost_price = EXCLUDED.cost_price,
@@ -111,7 +113,7 @@ router.post("/product", async (req, res) => {
          images = EXCLUDED.images,
          updated_at = NOW()
        RETURNING *`,
-      [d.reference, d.name, d.description, categoryId, d.condition, d.price, d.wholesale_price, d.tax_rate, d.weight, JSON.stringify(d.images)]
+      [d.reference, d.name, d.description, categoryId, d.brand, d.condition, d.price, d.wholesale_price, d.tax_rate, d.weight, JSON.stringify(d.images)]
     );
 
     const product = result.rows[0];

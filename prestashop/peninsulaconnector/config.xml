@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<module>
+    <name>peninsulaconnector</name>
+    <displayName><![CDATA[Peninsula Connector]]></displayName>
+    <version><![CDATA[0.2.0]]></version>
+    <description><![CDATA[Synchronise les produits PS vers la DB Peninsula (PSQL) pour le client desktop boutique.]]></description>
+    <author><![CDATA[Peninsula Armory Systems]]></author>
+    <tab><![CDATA[administration]]></tab>
+    <is_configurable>1</is_configurable>
+    <need_instance>0</need_instance>
+    <limited_countries></limited_countries>
+</module>

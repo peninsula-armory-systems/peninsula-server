@@ -102,7 +102,7 @@ router.get("/", requireAuth, async (req, res) => {
   const result = await query(
     `SELECT p.*,
             c.name AS category_name,
-            COALESCE(s.total_stock, 0) AS total_stock,
+            COALESCE(s.total_stock, 0)::int AS total_stock,
             COALESCE(ch.channels, '[]'::jsonb) AS channels
      FROM products p
      LEFT JOIN categories c ON c.id = p.category_id

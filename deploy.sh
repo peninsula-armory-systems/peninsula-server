@@ -209,7 +209,7 @@ log "Construction et lancement de la stack..."
 $COMPOSE $PROFILE build
 $COMPOSE $PROFILE up -d
 
-# ── Wait for health ─────────────────────────────────────
+# ── Wait for API health ─────────────────────────────────
 log "Attente du health check API..."
 source .env 2>/dev/null || true
 for i in $(seq 1 90); do
@@ -224,6 +224,43 @@ for i in $(seq 1 90); do
   fi
   sleep 1
 done
+
+# ── Wait for PrestaShop ─────────────────────────────────
+log "Attente de PrestaShop (première install ≈ 2-3 min)..."
+PS_OK=0
+for i in $(seq 1 180); do
+  PS_STATUS=$($DOCKER inspect -f '{{.State.Status}}' peninsula-prestashop 2>/dev/null || echo "missing")
+  PS_RESTARTS=$($DOCKER inspect -f '{{.RestartCount}}' peninsula-prestashop 2>/dev/null || echo "0")
+
+  # Si PS restart en boucle (>3 restarts), nuke le volume et relancer
+  if [ "$PS_RESTARTS" -gt 3 ]; then
+    warn "PrestaShop en boucle de restart — nettoyage du volume..."
+    $COMPOSE stop prestashop 2>/dev/null || true
+    $DOCKER rm -f peninsula-prestashop 2>/dev/null || true
+    $DOCKER volume rm peninsula-server_ps_data 2>/dev/null || true
+    $COMPOSE $PROFILE up -d prestashop
+    log "PrestaShop relancé avec un volume propre, attente..."
+    sleep 10
+    continue
+  fi
+
+  # Vérifier si PS répond
+  if curl -sf -o /dev/null -w '%{http_code}' http://localhost:${PS_PORT:-8080}/ 2>/dev/null | grep -qE '^(200|301|302)'; then
+    ok "PrestaShop opérationnel"
+    PS_OK=1
+    break
+  fi
+
+  if [ "$((i % 15))" -eq 0 ]; then
+    log "PrestaShop: $PS_STATUS (${i}s / 180s)..."
+  fi
+  sleep 1
+done
+
+if [ "$PS_OK" -eq 0 ]; then
+  warn "PrestaShop n'a pas répondu après 180s — vérifiez les logs :"
+  warn "  $COMPOSE logs --tail 50 prestashop"
+fi
 
 # ── Info ────────────────────────────────────────────────
 echo ""

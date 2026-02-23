@@ -3,6 +3,7 @@
 # docker compose up -d   → lance tout
 # docker compose logs -f → suit les logs
 # ─────────────────────────────────────────────────────────────
+version: '2.4'
 
 services:
 
@@ -83,8 +84,6 @@ services:
     restart: unless-stopped
     depends_on:
       ps-mysql:
-        condition: service_healthy
-      api:
         condition: service_healthy
     environment:
       DB_SERVER: ps-mysql

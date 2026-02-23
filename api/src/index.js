@@ -7,6 +7,12 @@ import { z } from "zod";
 import { initDb, query } from "./db.js";
 import { signAccessToken, signRefreshToken, verifyRefreshToken } from "./auth.js";
 import { requireAdmin, requireAuth } from "./middleware.js";
+import productsRouter from "./routes/products.js";
+import stockRouter from "./routes/stock.js";
+import channelsRouter from "./routes/channels.js";
+import categoriesRouter from "./routes/categories.js";
+import ordersRouter from "./routes/orders.js";
+import webhooksRouter from "./routes/webhooks.js";
 
 const app = express();
 
@@ -16,6 +22,14 @@ app.use(cors({ origin: process.env.CORS_ORIGIN || "*" }));
 
 const api = express.Router();
 app.use("/v1", api);
+
+// ── Route modules ───────────────────────────────────────
+api.use("/products", productsRouter);
+api.use("/stock", stockRouter);
+api.use("/channels", channelsRouter);
+api.use("/categories", categoriesRouter);
+api.use("/orders", ordersRouter);
+api.use("/webhook/prestashop", webhooksRouter);
 
 const loginSchema = z.object({
   username: z.string().min(3),

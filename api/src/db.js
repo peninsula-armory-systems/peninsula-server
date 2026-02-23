@@ -86,15 +86,14 @@ export async function initDb() {
   `);
 
   // ── Publication vers PrestaShop ───────────────────────
-  // Un produit dans "products" = inventaire Peninsula (complet)
-  // Un row ici avec published=true = en vente sur PrestaShop
-  // (Naturabuy est géré par un module PS séparé, pas par Peninsula)
+  // Les produits sont créés dans PS (web), puis poussés vers Peninsula (PSQL)
+  // Cette table trace le lien PS_id ↔ Peninsula_id pour la synchro
   await query(`
     CREATE TABLE IF NOT EXISTS product_channels (
       id SERIAL PRIMARY KEY,
       product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
       channel TEXT NOT NULL CHECK (channel IN ('prestashop')),
-      published BOOLEAN NOT NULL DEFAULT false,
+      published BOOLEAN NOT NULL DEFAULT true,
       external_id TEXT,
       sale_price NUMERIC(10,2),
       last_synced_at TIMESTAMP,
@@ -105,18 +104,92 @@ export async function initDb() {
     );
   `);
 
-  // ── Commandes reçues des canaux ───────────────────────
+  // ── Clients ───────────────────────────────────────────
+  await query(`
+    CREATE TABLE IF NOT EXISTS customers (
+      id SERIAL PRIMARY KEY,
+      first_name TEXT NOT NULL,
+      last_name TEXT NOT NULL,
+      email TEXT,
+      phone TEXT,
+      address JSONB NOT NULL DEFAULT '{}'::jsonb,
+      type TEXT NOT NULL DEFAULT 'individual' CHECK (type IN ('individual', 'professional')),
+      license_number TEXT,
+      license_expiry DATE,
+      id_document TEXT,
+      notes TEXT NOT NULL DEFAULT '',
+      created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+    );
+  `);
+
+  // ── Commandes (web PS + comptoir IRL) ─────────────────
   await query(`
     CREATE TABLE IF NOT EXISTS orders (
       id SERIAL PRIMARY KEY,
       source TEXT NOT NULL CHECK (source IN ('prestashop', 'direct')),
       external_order_id TEXT,
       reference TEXT,
-      status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'confirmed', 'shipped', 'delivered', 'cancelled')),
+      customer_id INTEGER REFERENCES customers(id) ON DELETE SET NULL,
+      status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'confirmed', 'shipped', 'delivered', 'cancelled', 'completed')),
       total NUMERIC(10,2) NOT NULL DEFAULT 0,
       currency TEXT NOT NULL DEFAULT 'EUR',
       customer JSONB NOT NULL DEFAULT '{}'::jsonb,
       items JSONB NOT NULL DEFAULT '[]'::jsonb,
+      notes TEXT NOT NULL DEFAULT '',
+      created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+    );
+  `);
+
+  // ── Paiements ─────────────────────────────────────────
+  await query(`
+    CREATE TABLE IF NOT EXISTS payments (
+      id SERIAL PRIMARY KEY,
+      order_id INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+      method TEXT NOT NULL CHECK (method IN ('cash', 'card', 'transfer', 'check')),
+      amount NUMERIC(10,2) NOT NULL,
+      status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'completed', 'refunded', 'failed')),
+      reference TEXT,
+      paid_at TIMESTAMP,
+      created_at TIMESTAMP NOT NULL DEFAULT NOW()
+    );
+  `);
+
+  // ── Rentrées de stock (réception fournisseur) ─────────
+  await query(`
+    CREATE TABLE IF NOT EXISTS stock_entries (
+      id SERIAL PRIMARY KEY,
+      supplier TEXT NOT NULL DEFAULT '',
+      reference TEXT,
+      status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'received', 'partial')),
+      items JSONB NOT NULL DEFAULT '[]'::jsonb,
+      notes TEXT NOT NULL DEFAULT '',
+      received_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      received_at TIMESTAMP,
+      created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+    );
+  `);
+
+  // ── Registre des armes (livre de police) ──────────────
+  // Chaque arme individuelle avec numéro de série, traçabilité achat/vente
+  await query(`
+    CREATE TABLE IF NOT EXISTS firearm_records (
+      id SERIAL PRIMARY KEY,
+      product_id INTEGER REFERENCES products(id) ON DELETE SET NULL,
+      serial_number TEXT UNIQUE NOT NULL,
+      manufacturer TEXT NOT NULL DEFAULT '',
+      model TEXT NOT NULL DEFAULT '',
+      caliber TEXT NOT NULL DEFAULT '',
+      category TEXT NOT NULL DEFAULT 'C' CHECK (category IN ('A', 'A1', 'B', 'C', 'D')),
+      status TEXT NOT NULL DEFAULT 'in_stock' CHECK (status IN ('in_stock', 'reserved', 'sold', 'transferred', 'returned_supplier', 'destroyed')),
+      entry_date DATE NOT NULL DEFAULT CURRENT_DATE,
+      sale_date DATE,
+      customer_id INTEGER REFERENCES customers(id) ON DELETE SET NULL,
+      supplier TEXT NOT NULL DEFAULT '',
+      purchase_price NUMERIC(10,2) NOT NULL DEFAULT 0,
+      stock_entry_id INTEGER REFERENCES stock_entries(id) ON DELETE SET NULL,
       notes TEXT NOT NULL DEFAULT '',
       created_at TIMESTAMP NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMP NOT NULL DEFAULT NOW()

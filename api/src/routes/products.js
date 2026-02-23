@@ -45,7 +45,7 @@ const listQuerySchema = z.object({
   category_id: z.coerce.number().int().optional(),
   search: z.string().optional(),
   condition: z.enum(["new", "used", "refurbished"]).optional(),
-  published_on: z.enum(["prestashop", "naturabuy"]).optional(),
+  published_on: z.enum(["prestashop"]).optional(),
 });
 
 // ── Helpers ─────────────────────────────────────────────

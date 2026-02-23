@@ -13,6 +13,10 @@ import channelsRouter from "./routes/channels.js";
 import categoriesRouter from "./routes/categories.js";
 import ordersRouter from "./routes/orders.js";
 import webhooksRouter from "./routes/webhooks.js";
+import customersRouter from "./routes/customers.js";
+import paymentsRouter from "./routes/payments.js";
+import stockEntriesRouter from "./routes/stock-entries.js";
+import firearmsRouter from "./routes/firearms.js";
 
 const app = express();
 
@@ -29,6 +33,10 @@ api.use("/stock", stockRouter);
 api.use("/channels", channelsRouter);
 api.use("/categories", categoriesRouter);
 api.use("/orders", ordersRouter);
+api.use("/customers", customersRouter);
+api.use("/payments", paymentsRouter);
+api.use("/stock-entries", stockEntriesRouter);
+api.use("/firearms", firearmsRouter);
 api.use("/webhook/prestashop", webhooksRouter);
 
 const loginSchema = z.object({
